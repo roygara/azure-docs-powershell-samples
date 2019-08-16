@@ -1,6 +1,6 @@
-﻿# Run the script in a new open Powershell window, which has not run other cmdlets, or AzCopy performance could suffer .
+# Run the script in a new open Powershell window, which has not run other cmdlets, or AzCopy performance could suffer .
 # Need install Azure PowerShell before runing the script: https://github.com/Azure/azure-powershell/releases
-# Need install AzCopy before runing the script: https://docs.microsoft.com/en-us/azure/storage/common/storage-use-azcopy
+# Need install AzCopy before runing the script: https://docs.microsoft.com/Az.Storage/common/storage-use-azcopy
 # Do not modify the Source or Destination accounts while the copy is running
 
 param (
@@ -42,7 +42,8 @@ param (
     $FileItemVersion = (Get-Item $AzCopyPath).VersionInfo
     $FilePath = ("{0}.{1}.{2}.{3}" -f  $FileItemVersion.FileMajorPart,  $FileItemVersion.FileMinorPart,  $FileItemVersion.FileBuildPart,  $FileItemVersion.FilePrivatePart)
 
-    if([version] $FilePath -lt "7.0.0.2")
+    # only netcore version AzCopy.exe has version 0.0.0.0, and all netcore version AzCopy works in this script 
+    if(([version] $FilePath -lt "7.0.0.2") -and ([version] $FilePath -ne "0.0.0.0"))
     {
         $AzCopyPath = Read-Host "Version of AzCopy found at default install directory is of a lower, unsupported version. Please input the full filePath of the AzCopy.exe that is version 7.0.0.2 or higher, e.g.: C:\Program Files (x86)\Microsoft SDKs\Azure\AzCopy\AzCopy.exe"
     }
@@ -54,13 +55,13 @@ param (
 
 # Create and check Storage context
 $Error.Clear()
-$srcCtx = New-AzureStorageContext -StorageAccountName $srcStorageAccountName -StorageAccountKey $srcStorageAccountKey
+$srcCtx = New-AzStorageContext -StorageAccountName $srcStorageAccountName -StorageAccountKey $srcStorageAccountKey
 if ($srcCtx -eq $null)
 {
     Write-Error "Script could not create source Storage Context, possibly due to invalid StorageAccountName or StorageAccount Key terminating: $Error[0]";
     return;
 }
-$destCtx = New-AzureStorageContext -StorageAccountName $destStorageAccountName -StorageAccountKey $destStorageAccountKey
+$destCtx = New-AzStorageContext -StorageAccountName $destStorageAccountName -StorageAccountKey $destStorageAccountKey
 if ($destCtx -eq $null)
 {
     Write-Error "Script could not create destination storage context, possibly due to invalid StorageAccountName or StorageAccount Key terminating: $Error[0]";
@@ -69,13 +70,13 @@ if ($destCtx -eq $null)
 
 #Check Source and Destination Storage account Connection
 $Error.Clear()
-$Containers = Get-AzureStorageContainer -MaxCount 1 -Context $srcCtx
+$Containers = Get-AzStorageContainer -MaxCount 1 -Context $srcCtx
 if ($Error.Count -gt 0)
 {
     Write-Error "Script failed to connect to source Storage account, terminating: $Error[0]";
     return;
 }
-$Containers = Get-AzureStorageContainer -MaxCount 1 -Context $destCtx
+$Containers = Get-AzStorageContainer -MaxCount 1 -Context $destCtx
 if ($Error.Count -gt 0)
 {
     Write-Error "Script failed to connect to destination Storage account, terminating: $Error[0]";
@@ -120,14 +121,14 @@ do{
     # List source containers
     $retry = 1
     $Error.Clear()
-    $srcContainers = Get-AzureStorageContainer -MaxCount $MaxReturn -ContinuationToken $Token -Context $srcCtx
+    $srcContainers = Get-AzStorageContainer -MaxCount $MaxReturn -ContinuationToken $Token -Context $srcCtx
 
     # If list container fail, retry it
     while(($Error.Count -gt 0) -and ($RetryTimes -eq -1 -or $retry -le $retryTimes))
     {
         Write-Host "Retry List containers $retry"
         $Error.Clear()
-        $srcContainers = Get-AzureStorageContainer -MaxCount $MaxReturn -ContinuationToken $Token -Context $srcCtx
+        $srcContainers = Get-AzStorageContainer -MaxCount $MaxReturn -ContinuationToken $Token -Context $srcCtx
         $retry++
     }
 
